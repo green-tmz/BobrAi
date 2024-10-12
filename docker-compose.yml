@@ -1,0 +1,60 @@
+version: "3"
+services:
+  nginx:
+    image: nginx:alpine
+    restart: always
+    container_name: ${APP_NAME}_nginx
+    env_file:
+      - .env
+    tty: true
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./app:/var/www
+      - ./conf/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php-fpm
+      - db
+    networks:
+      app-network:
+        ipv4_address: 12.20.0.2
+
+  php-fpm:
+    build:
+      context: .
+      dockerfile: ./conf/php-fpm/Dockerfile
+    restart: always
+    container_name: ${APP_NAME}_php-fpm
+    env_file:
+      - .env
+    tty: true
+    volumes:
+      - ./app:/var/www
+      - ./conf/php-fpm/php.ini:/usr/local/etc/php/conf.d/php.ini
+    networks:
+      app-network:
+        ipv4_address: 12.20.0.3
+
+  db:
+    image: mysql:8.0
+    container_name: ${APP_NAME}_db
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - 3306:3306
+    networks:
+      app-network:
+        ipv4_address: 12.20.0.4
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 12.20.0.0/8
